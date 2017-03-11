@@ -1,2 +1,2 @@
-# aspect-based-sentiment
+# Aspect-Based-Sentiment
 Project for Deep Learning course
