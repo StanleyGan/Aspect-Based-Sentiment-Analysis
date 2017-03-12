@@ -22,8 +22,8 @@ class data:
         self.products = [t.findall(i) for i in dirs]
         self.products = [''.join(i) for i in self.products]
         
-        self.test_prop = 0.1
-        self.val_prop = 0.2
+        self.test_prop = 0.05
+        self.val_prop = 0.05
     
     '''
     Input: path to the text file containing reviews
@@ -52,17 +52,14 @@ class data:
         for rev in data:
             match_aspAndSc = r1.findall(rev)
             
-            if match_aspAndSc:  #not empty
-                listOfAsp = list()
-                for aspNSc in match_aspAndSc:
-                    match_asp = r2.findall(aspNSc)
-                    match_score = r3.findall(aspNSc)
-                    
-                    listOfAsp.append(match_asp[0][:-1])
-                    data_asp.append(match_asp[0][:-1])   #as will return 'a[', remove '['
-                    data_sc.append(int(''.join(match_score)))
-            else:
-                listOfAsp = []  #so that data_revAndAsp_DF has matching number of reviews
+            listOfAsp = list()
+            for aspNSc in match_aspAndSc:
+                match_asp = r2.findall(aspNSc)
+                match_score = r3.findall(aspNSc)
+                
+                listOfAsp.append(match_asp[0][:-1])
+                data_asp.append(match_asp[0][:-1])   #as will return 'a[', remove '['
+                data_sc.append(int(''.join(match_score)))
                     
             listOfAsp = set(listOfAsp)
             listOfAsp = list(listOfAsp)
@@ -81,8 +78,6 @@ class data:
             
         data_revAndAsp_DF['Review'] = data
         data_revAndAsp_DF['Aspect'] = listOfdata_asp
-        data_revAndAsp_DF = data_revAndAsp_DF[data_revAndAsp_DF.astype(str)["Aspect"] != "[]" ]
-        data_revAndAsp_DF.reset_index(drop=True, inplace=True)
           
         #return review and aspect for now
         return data_revAndAsp_DF
