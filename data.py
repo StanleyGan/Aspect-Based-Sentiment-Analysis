@@ -5,6 +5,8 @@ import pandas as pd
 import re
 import os
 import random
+from sklearn.feature_extraction.text import CountVectorizer
+import numpy as np
 
 class data:
     
@@ -16,6 +18,9 @@ class data:
         self.score_pattern = "[+-][0-9]"
         self.textFile_pattern = "(.*).txt"
         self.othertag_pattern = "\[[upsc]{1,2}\]"
+        self.vocab = list()
+        self.vocab_size = 500
+        self.numReviews = 0;
         
         t = re.compile(self.textFile_pattern)
         dirs = os.listdir(self.dataPath)
@@ -86,29 +91,51 @@ class data:
         summarizeData = dict()
         for prod in self.products:
             summarizeData[prod] = self._summarizeData(prod)
-        
-        training = pd.DataFrame(columns=["Review", "Aspect"])
-        validation = pd.DataFrame(columns=["Review", "Aspect"])
-        test = pd.DataFrame(columns=["Review", "Aspect"])
-        for prod in summarizeData:
-            size = summarizeData[prod].shape[0]
-            num_test = int( round(self.test_prop * size) )
-            test_ind = random.sample(range(size), num_test)
-            test = test.append(summarizeData[prod].iloc[test_ind])
             
-            num_val = int( round(self.val_prop * size) )
-            remaining_index = [i for i in range(size) if i not in test_ind]
-            val_index = random.sample(remaining_index, num_val)
-            validation = validation.append(summarizeData[prod].iloc[val_index])
-            training = training.append(summarizeData[prod].iloc[ [i for i in remaining_index if i not in val_index] ])
-      
-        return training, validation, test
+        allData = pd.concat([summarizeData[p] for p in self.products])
+        allData_feat, allData_label, self.vocab = self._toNumAndLabels(allData["Review"].tolist(), allData["Aspect"].tolist())
 
+        numTest = int( round(self.test_prop * self.numReviews) )
+        test_ind = random.sample(range(self.numReviews), numTest)
+        test_feat = allData_feat[test_ind, :]
+        test_label = allData_label[test_ind, :]
+        
+        remaining_index = [i for i in range(self.numReviews) if i not in test_ind]
+        num_val = int( round(self.val_prop * self.numReviews) )
+        val_index = random.sample(remaining_index, num_val)
+        validation_feat = allData_feat[val_index, :]
+        validation_label = allData_label[val_index, :]
+        training_feat = allData_feat[ [i for i in remaining_index if i not in val_index], : ] 
+        training_label = allData_label[ [i for i in remaining_index if i not in val_index], : ] 
+      
+        return training_feat, training_label, validation_feat, validation_label, test_feat, test_label
+    
+    def _toNumAndLabels(self, rev, aspect):
+        self.numReviews = len(rev)
+        vectorizer = CountVectorizer(analyzer="word", stop_words="english", max_features=self.vocab_size)
+        features = vectorizer.fit_transform(rev)
+        vocab = vectorizer.get_feature_names()
+        
+        label= []
+        for a in aspect:
+            temp = np.zeros((len(vocab),1))
+            temp[[i for i, item in enumerate(vocab) if item in a]] = 1
+            label.append(temp)
+            
+        label = np.array(label)
+        label = np.reshape(label, [self.numReviews, -1])
+        features = features.toarray()
+        features = np.reshape(features, [self.numReviews, -1])
+        return (features, label, vocab)
+    
     def getData(self):
         return self._splitData_revAndAsp()
     
+    def getVocab(self):
+        return self.vocab
+        
 #canong3 = summarizeData("/home/stanleygan/Documents/Deep_Learning/project/customer_review_data/Canon G3.txt")         
 
 if __name__ == '__main__':
     d = data("/home/stanleygan/Documents/Deep_Learning/project/customer_review_data/")
-    training, validation, test = d.getData()
+    train_feat, train_lab, val_feat, val_lab, test_feat, test_lab = d.getData()
